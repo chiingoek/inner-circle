@@ -1,112 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inner Circle | The Vault</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8a2be2;
+            --primary-glow: rgba(138, 43, 226, 0.4);
+            --mod: #00ced1;
+            --bg: #050505;
+            --surface: #111;
+            --text: #e0e0e0;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            background-image: radial-gradient(circle at center, #1a0033 0%, #050505 100%);
+        }
+
+        /* --- UI Overlays --- */
+        #authOverlay, #kickOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .auth-card {
+            background: var(--surface);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 40px var(--primary-glow);
+            width: 380px;
+            text-align: center;
+        }
+
+        h1, h2 { letter-spacing: 5px; text-transform: uppercase; color: var(--primary); text-shadow: 0 0 10px var(--primary-glow); }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: 1px solid #333;
+            background: #0a0a0a;
+            color: #fff;
+            transition: 0.3s;
+        }
+
+        input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
+
+        .btn-main {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+            padding: 15px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-main:hover { background: #9b30ff; transform: scale(1.02); }
+
+        /* --- Main Layout --- */
+        header {
+            height: 70px;
+            background: rgba(17, 17, 17, 0.9);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        main { display: flex; height: calc(100vh - 70px); }
+
+        #sidebar {
+            width: 300px;
+            background: rgba(10, 10, 10, 0.9);
+            border-right: 1px solid #222;
+            padding: 20px;
+            overflow-y: auto;
+            display: none; /* Only for Mods/Admins */
+        }
+
+        #chatArea { flex: 1; display: flex; flex-direction: column; background: rgba(0,0,0,0.3); }
+
+        /* --- Messages --- */
+        #chatContainer { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        
+        .message {
+            padding: 12px 18px;
+            border-radius: 15px;
+            max-width: 70%;
+            position: relative;
+            font-size: 0.95em;
+            line-height: 1.4;
+        }
+
+        .msg-Member { background: #222; align-self: flex-start; border-left: 3px solid #444; }
+        .msg-Moderator { background: #1a252b; align-self: flex-start; border-left: 3px solid var(--mod); }
+        .msg-Admin { background: #251a2b; align-self: flex-start; border-left: 3px solid var(--primary); }
+        .msg-me { align-self: flex-end; background: var(--primary); border: none; color: white; }
+
+        .msg-meta { font-size: 0.7em; opacity: 0.5; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
+
+        /* --- Moderation Tools --- */
+        .user-row {
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #333;
+        }
+
+        .mod-btn {
+            font-size: 0.65em;
+            padding: 4px 8px;
+            margin-right: 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            text-transform: uppercase;
+        }
+        .b-kick { background: #ff4500; color: white; }
+        .b-mute { background: #daa520; color: white; }
+        .b-ban { background: #ff0000; color: white; }
+        .b-promo { background: var(--mod); color: white; }
+
+        #inputArea { padding: 25px; background: #0f0f0f; display: flex; gap: 15px; border-top: 1px solid #222; }
+    </style>
+</head>
+<body>
+
+<div id="authOverlay">
+    <div class="auth-card">
+        <h1>Initiation</h1>
+        <input type="text" id="userIn" placeholder="Identity (Username)">
+        <input type="password" id="passIn" placeholder="Security Cipher (Password)">
+        <button class="btn-main" onclick="handleAuth('login')">Access The Circle</button>
+        <button style="background:none; border:none; color:#666; cursor:pointer; margin-top:15px; text-decoration:underline;" onclick="handleAuth('signup')">New Initiate? Register</button>
+    </div>
+</div>
+
+<div id="kickOverlay" style="display:none;">
+    <div class="auth-card">
+        <h2 style="color:red;">Exiled</h2>
+        <p>Your presence is no longer welcome.</p>
+        <button id="rejoinBtn" class="btn-main" onclick="requestRejoin()">Request Rejoin</button>
+        <p id="requestStatus" style="font-size:0.8em; color:gray; margin-top:10px;"></p>
+    </div>
+</div>
+
+<header>
+    <h2 style="font-size: 1.2em; margin: 0;">Inner Circle</h2>
+    <div id="headerInfo" style="font-size: 0.8em; letter-spacing: 1px;"></div>
+    <button onclick="location.reload()" style="background:none; color:red; border:1px solid red; padding:5px 10px; cursor:pointer; border-radius:5px;">Logout</button>
+</header>
+
+<main>
+    <div id="sidebar">
+        <h3 style="font-size: 0.8em; color: var(--primary); margin-bottom: 20px;">MODERATION SECTOR</h3>
+        <div id="userList"></div>
+    </div>
+
+    <div id="chatArea">
+        <div id="chatContainer"></div>
+        <div id="inputArea">
+            <input type="text" id="messageInput" placeholder="Transmit wisdom..." autocomplete="off">
+            <button class="btn-main" style="width:120px; margin-top:0;" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</main>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-  // YOUR CONFIG HERE
-  const firebaseConfig = {
-  apiKey: "AIzaSyDtGHGk144-eQIllFpwABXk8Ss4FwCgQME",
-  authDomain: "circle-38d10.firebaseapp.com",
-  databaseURL: "https://circle-38d10-default-rtdb.firebaseio.com",
-  projectId: "circle-38d10",
-  storageBucket: "circle-38d10.firebasestorage.app",
-  messagingSenderId: "122771546745",
-  appId: "1:122771546745:web:c766e8da22974e877aeaa8",
-  measurementId: "G-S0Y63CCSL0"
-};
+    const firebaseConfig = {
+        apiKey: "AIzaSyDtGHGk144-eQIllFpwABXk8Ss4FwCgQME",
+        authDomain: "circle-38d10.firebaseapp.com",
+        databaseURL: "https://circle-38d10-default-rtdb.firebaseio.com",
+        projectId: "circle-38d10",
+        storageBucket: "circle-38d10.firebasestorage.app",
+        messagingSenderId: "122771546745",
+        appId: "1:122771546745:web:c766e8da22974e877aeaa8"
+    };
 
+    firebase.initializeApp(firebaseConfig);
+    const rdb = firebase.database();
+    let currentUser = null;
 
-  firebase.initializeApp(firebaseConfig);
-  const rdb = firebase.database();
-  let currentUser = null;
+    // --- AUTHENTICATION ---
+    function handleAuth(type) {
+        const u = document.getElementById('userIn').value.trim();
+        const p = document.getElementById('passIn').value;
+        if(!u || !p) return;
 
-  // --- AUTH SYSTEM ---
-  function handleAuth(type) {
-    const u = document.getElementById('userIn').value.trim();
-    const p = document.getElementById('passIn').value;
-    if(!u || !p) return alert("Credentials required.");
-
-    rdb.ref('users/' + u).once('value', (snap) => {
-      const data = snap.val();
-      if(type === 'signup') {
-        if(data) return alert("Username taken.");
-        rdb.ref('users/' + u).set({
-          pass: p, role: "Member", status: "Active", muteUntil: 0, rejoinPending: false
+        rdb.ref('users/' + u).once('value', (snap) => {
+            const data = snap.val();
+            if(type === 'signup') {
+                if(data) return alert("Identity taken.");
+                rdb.ref('users/' + u).set({
+                    pass: p, role: "Member", status: "Active", muteUntil: 0, rejoinPending: false
+                }).then(() => alert("Identity Registered. Now login."));
+            } else {
+                if(data && data.pass === p) {
+                    if(data.status === 'Banned') return alert("YOU ARE PERMANENTLY EXILED.");
+                    currentUser = { name: u, ...data };
+                    if(data.status === 'Kicked') {
+                        document.getElementById('authOverlay').style.display = 'none';
+                        document.getElementById('kickOverlay').style.display = 'flex';
+                        return;
+                    }
+                    document.getElementById('authOverlay').style.display = 'none';
+                    launchCircle();
+                } else { alert("Cipher Incorrect."); }
+            }
         });
-        alert("Registration complete.");
-      } else {
-        if(data && data.pass === p) {
-          if(data.status === 'Banned') return alert("PERMANENTLY EXILED.");
-          currentUser = { name: u, ...data };
-          if(data.status === 'Kicked') {
-             document.getElementById('authOverlay').style.display = 'none';
-             document.getElementById('kickOverlay').style.display = 'flex';
-             return;
-          }
-          document.getElementById('authOverlay').style.display = 'none';
-          launchCircle();
-        } else { alert("Access Denied."); }
-      }
-    });
-  }
-
-  function launchCircle() {
-    // Show Sidebar for Admins & Mods
-    if(currentUser.role === 'Admin' || currentUser.role === 'Moderator') {
-        document.getElementById('sidebar').style.display = 'block';
-        rdb.ref('users').on('value', renderUserList);
     }
-    
-    document.getElementById('headerInfo').innerText = `${currentUser.name} (${currentUser.role})`;
 
-    // Real-time Message Sync
-    rdb.ref('messages').limitToLast(40).on('value', (snap) => {
-      const container = document.getElementById('chatContainer');
-      container.innerHTML = '';
-      snap.forEach(child => {
-        const m = child.val();
-        const div = document.createElement('div');
-        div.className = `message msg-${m.role} ${m.sender === currentUser.name ? 'msg-me' : ''}`;
-        div.innerHTML = `<small>${m.sender} [${m.role}]</small><br>${m.text}`;
-        container.appendChild(div);
-      });
-      container.scrollTop = container.scrollHeight;
-    });
+    function launchCircle() {
+        if(currentUser.role === 'Admin' || currentUser.role === 'Moderator') {
+            document.getElementById('sidebar').style.display = 'block';
+            rdb.ref('users').on('value', renderUserList);
+        }
+        document.getElementById('headerInfo').innerText = `${currentUser.name} // LEVEL: ${currentUser.role}`;
 
-    // Forced Logout Listener (If kicked while online)
-    rdb.ref('users/' + currentUser.name + '/status').on('value', (snap) => {
-      if(snap.val() === 'Kicked' || snap.val() === 'Banned') location.reload();
-    });
-  }
-
-  // --- MODERATION LOGIC ---
-  function modAction(action, target) {
-    const targetRef = rdb.ref('users/' + target);
-    
-    if(action === 'kick') targetRef.update({ status: 'Kicked' });
-    if(action === 'mute') targetRef.update({ muteUntil: Date.now() + 600000 }); // 10 min
-    if(action === 'approve') targetRef.update({ status: 'Active', rejoinPending: false });
-    
-    // Admin Only Powers
-    if(currentUser.role === 'Admin') {
-        if(action === 'ban') targetRef.update({ status: 'Banned' });
-        if(action === 'promote') targetRef.update({ role: 'Moderator' });
-    }
-  }
-
-  function sendMessage() {
-    const msg = document.getElementById('messageInput').value;
-    if(!msg) return;
-    
-    // Check Mute
-    rdb.ref('users/' + currentUser.name).once('value', (snap) => {
-        if(snap.val().muteUntil > Date.now()) return alert("You are silenced.");
-        rdb.ref('messages').push({
-            sender: currentUser.name,
-            role: currentUser.role,
-            text: msg,
-            time: Date.now()
+        // Live Chat Feed
+        rdb.ref('messages').limitToLast(50).on('value', (snap) => {
+            const container = document.getElementById('chatContainer');
+            container.innerHTML = '';
+            snap.forEach(child => {
+                const m = child.val();
+                const isMe = m.sender === currentUser.name;
+                const div = document.createElement('div');
+                div.className = `message msg-${m.role} ${isMe ? 'msg-me' : ''}`;
+                div.innerHTML = `<div class="msg-meta">${m.sender} [${m.role}]</div><div>${m.text}</div>`;
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
         });
-        document.getElementById('messageInput').value = '';
-    });
-  }
+
+        // Forced Status Monitor
+        rdb.ref('users/' + currentUser.name + '/status').on('value', (s) => {
+            if(s.val() === 'Kicked' || s.val() === 'Banned') location.reload();
+        });
+    }
+
+    // --- MODERATION ---
+    function renderUserList(snap) {
+        const list = document.getElementById('userList');
+        list.innerHTML = '';
+        snap.forEach(child => {
+            const name = child.key;
+            const u = child.val();
+            if(name === currentUser.name) return;
+
+            const div = document.createElement('div');
+            div.className = 'user-row';
+            
+            let tools = `<button class="mod-btn b-mute" onclick="modAction('mute','${name}')">Mute</button>
+                         <button class="mod-btn b-kick" onclick="modAction('kick','${name}')">Kick</button>`;
+            
+            if(currentUser.role === 'Admin') {
+                tools += `<button class="mod-btn b-ban" onclick="modAction('ban','${name}')">Ban</button>
+                          <button class="mod-btn b-promo" onclick="modAction('promote','${name}')">Mod</button>`;
+            }
+
+            if(u.rejoinPending) {
+                tools += `<button class="mod-btn" style="background:green; color:white; width:100%; margin-top:5px;" onclick="modAction('approve','${name}')">Approve Rejoin</button>`;
+            }
+
+            div.innerHTML = `
+                <div style="font-size:0.8em; margin-bottom:8px;">${name} <span style="color:#666;">(${u.role})</span></div>
+                <div style="font-size:0.7em; color:${u.status === 'Active' ? 'green' : 'red'}; margin-bottom:8px;">${u.status}</div>
+                <div>${tools}</div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function modAction(type, target) {
+        const ref = rdb.ref('users/' + target);
+        if(type === 'mute') ref.update({ muteUntil: Date.now() + 600000 });
+        if(type === 'kick') ref.update({ status: 'Kicked' });
+        if(type === 'ban') ref.update({ status: 'Banned' });
+        if(type === 'promote') ref.update({ role: 'Moderator' });
+        if(type === 'approve') ref.update({ status: 'Active', rejoinPending: false });
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const msg = input.value.trim();
+        if(!msg) return;
+
+        rdb.ref('users/' + currentUser.name).once('value', (snap) => {
+            if(snap.val().muteUntil > Date.now()) return alert("TRANSISSION BLOCKED: YOU ARE MUTED.");
+            rdb.ref('messages').push({
+                sender: currentUser.name,
+                role: currentUser.role,
+                text: msg,
+                time: Date.now()
+            });
+            input.value = '';
+        });
+    }
+
+    function requestRejoin() {
+        rdb.ref('users/' + currentUser.name).update({ rejoinPending: true });
+        document.getElementById('rejoinBtn').disabled = true;
+        document.getElementById('requestStatus').innerText = "Signal sent. Awaiting Grandmaster approval.";
+    }
+
+    // Enter Key Support
+    document.getElementById('messageInput').addEventListener('keypress', e => { if(e.key === 'Enter') sendMessage(); });
 </script>
+
+</body>
+</html>
