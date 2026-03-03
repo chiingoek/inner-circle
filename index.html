@@ -1,0 +1,112 @@
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+  // YOUR CONFIG HERE
+  const firebaseConfig = {
+  apiKey: "AIzaSyDtGHGk144-eQIllFpwABXk8Ss4FwCgQME",
+  authDomain: "circle-38d10.firebaseapp.com",
+  databaseURL: "https://circle-38d10-default-rtdb.firebaseio.com",
+  projectId: "circle-38d10",
+  storageBucket: "circle-38d10.firebasestorage.app",
+  messagingSenderId: "122771546745",
+  appId: "1:122771546745:web:c766e8da22974e877aeaa8",
+  measurementId: "G-S0Y63CCSL0"
+};
+
+
+  firebase.initializeApp(firebaseConfig);
+  const rdb = firebase.database();
+  let currentUser = null;
+
+  // --- AUTH SYSTEM ---
+  function handleAuth(type) {
+    const u = document.getElementById('userIn').value.trim();
+    const p = document.getElementById('passIn').value;
+    if(!u || !p) return alert("Credentials required.");
+
+    rdb.ref('users/' + u).once('value', (snap) => {
+      const data = snap.val();
+      if(type === 'signup') {
+        if(data) return alert("Username taken.");
+        rdb.ref('users/' + u).set({
+          pass: p, role: "Member", status: "Active", muteUntil: 0, rejoinPending: false
+        });
+        alert("Registration complete.");
+      } else {
+        if(data && data.pass === p) {
+          if(data.status === 'Banned') return alert("PERMANENTLY EXILED.");
+          currentUser = { name: u, ...data };
+          if(data.status === 'Kicked') {
+             document.getElementById('authOverlay').style.display = 'none';
+             document.getElementById('kickOverlay').style.display = 'flex';
+             return;
+          }
+          document.getElementById('authOverlay').style.display = 'none';
+          launchCircle();
+        } else { alert("Access Denied."); }
+      }
+    });
+  }
+
+  function launchCircle() {
+    // Show Sidebar for Admins & Mods
+    if(currentUser.role === 'Admin' || currentUser.role === 'Moderator') {
+        document.getElementById('sidebar').style.display = 'block';
+        rdb.ref('users').on('value', renderUserList);
+    }
+    
+    document.getElementById('headerInfo').innerText = `${currentUser.name} (${currentUser.role})`;
+
+    // Real-time Message Sync
+    rdb.ref('messages').limitToLast(40).on('value', (snap) => {
+      const container = document.getElementById('chatContainer');
+      container.innerHTML = '';
+      snap.forEach(child => {
+        const m = child.val();
+        const div = document.createElement('div');
+        div.className = `message msg-${m.role} ${m.sender === currentUser.name ? 'msg-me' : ''}`;
+        div.innerHTML = `<small>${m.sender} [${m.role}]</small><br>${m.text}`;
+        container.appendChild(div);
+      });
+      container.scrollTop = container.scrollHeight;
+    });
+
+    // Forced Logout Listener (If kicked while online)
+    rdb.ref('users/' + currentUser.name + '/status').on('value', (snap) => {
+      if(snap.val() === 'Kicked' || snap.val() === 'Banned') location.reload();
+    });
+  }
+
+  // --- MODERATION LOGIC ---
+  function modAction(action, target) {
+    const targetRef = rdb.ref('users/' + target);
+    
+    if(action === 'kick') targetRef.update({ status: 'Kicked' });
+    if(action === 'mute') targetRef.update({ muteUntil: Date.now() + 600000 }); // 10 min
+    if(action === 'approve') targetRef.update({ status: 'Active', rejoinPending: false });
+    
+    // Admin Only Powers
+    if(currentUser.role === 'Admin') {
+        if(action === 'ban') targetRef.update({ status: 'Banned' });
+        if(action === 'promote') targetRef.update({ role: 'Moderator' });
+    }
+  }
+
+  function sendMessage() {
+    const msg = document.getElementById('messageInput').value;
+    if(!msg) return;
+    
+    // Check Mute
+    rdb.ref('users/' + currentUser.name).once('value', (snap) => {
+        if(snap.val().muteUntil > Date.now()) return alert("You are silenced.");
+        rdb.ref('messages').push({
+            sender: currentUser.name,
+            role: currentUser.role,
+            text: msg,
+            time: Date.now()
+        });
+        document.getElementById('messageInput').value = '';
+    });
+  }
+</script>
