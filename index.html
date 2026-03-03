@@ -1,61 +1,260 @@
-<style>
-    .notif-glow {
-        box-shadow: 0 0 15px var(--primary);
-        border: 1px solid var(--primary) !important;
-        animation: pulse 1.5s infinite;
-    }
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
-    }
-    #dmList {
-        margin-top: 20px;
-        padding-top: 10px;
-        border-top: 1px solid #333;
-    }
-</style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inner Circle | The Vault</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8a2be2;
+            --primary-glow: rgba(138, 43, 226, 0.4);
+            --mod: #00ced1;
+            --bg: #050505;
+            --surface: #111;
+            --text: #e0e0e0;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg); color: var(--text);
+            height: 100vh; overflow: hidden;
+            background-image: radial-gradient(circle at center, #1a0033 0%, #050505 100%);
+        }
+
+        /* --- UI Overlays --- */
+        #authOverlay, #kickOverlay, #dmOverlay {
+            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(15px); z-index: 1000;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        .card {
+            background: var(--surface); padding: 30px; border-radius: 20px;
+            border: 1px solid var(--primary); box-shadow: 0 0 40px var(--primary-glow);
+            width: 400px; text-align: center;
+        }
+
+        h1, h2 { letter-spacing: 5px; text-transform: uppercase; color: var(--primary); text-shadow: 0 0 10px var(--primary-glow); }
+
+        input {
+            width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px;
+            border: 1px solid #333; background: #0a0a0a; color: #fff;
+        }
+
+        .btn-main {
+            background: var(--primary); color: white; width: 100%; padding: 12px;
+            margin-top: 10px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer;
+        }
+
+        /* --- Layout --- */
+        header { height: 60px; background: rgba(17, 17, 17, 0.9); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; border-bottom: 2px solid var(--primary); }
+        main { display: flex; height: calc(100vh - 60px); }
+        #sidebar { width: 280px; background: rgba(10, 10, 10, 0.9); border-right: 1px solid #222; padding: 15px; overflow-y: auto; }
+        #chatArea { flex: 1; display: flex; flex-direction: column; }
+        #chatContainer, #dmContainer { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        
+        /* --- Messages --- */
+        .message { padding: 10px 15px; border-radius: 12px; max-width: 80%; font-size: 0.9em; }
+        .msg-Member { background: #222; align-self: flex-start; border-left: 3px solid #444; }
+        .msg-Moderator { background: #1a252b; align-self: flex-start; border-left: 3px solid var(--mod); }
+        .msg-Admin { background: #251a2b; align-self: flex-start; border-left: 3px solid var(--primary); }
+        .msg-me { align-self: flex-end; background: var(--primary); color: white; }
+
+        .user-row { background: #1a1a1a; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #333; cursor: pointer; }
+        .mod-btn { font-size: 0.6em; padding: 3px 6px; margin-right: 2px; border-radius: 3px; cursor: pointer; border: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="authOverlay">
+    <div class="card">
+        <h1 id="authTitle">Initiation</h1>
+        <input type="text" id="userIn" placeholder="Identity">
+        <input type="password" id="passIn" placeholder="Cipher">
+        <button id="mainAuthBtn" class="btn-main">Access</button>
+        <button id="toggleBtn" style="background:none; border:none; color:var(--primary); cursor:pointer; margin-top:10px; font-size:0.8em;">Register New</button>
+    </div>
+</div>
+
+<div id="dmOverlay" style="display:none;">
+    <div class="card" style="width: 500px; height: 600px; display: flex; flex-direction: column;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+            <h2 id="dmTargetName" style="font-size:1em; margin:0;">Private Link</h2>
+            <button onclick="closeDM()" style="background:red; color:white; border:none; cursor:pointer; border-radius:5px;">X</button>
+        </div>
+        <div id="dmContainer" style="background:#0a0a0a; border-radius:10px; border:1px solid #333; margin-bottom:10px;"></div>
+        <div style="display:flex; gap:10px;">
+            <input type="text" id="dmInput" placeholder="Secure message..." style="margin:0;">
+            <button class="btn-main" style="width:80px; margin:0;" onclick="sendDM()">Send</button>
+        </div>
+    </div>
+</div>
+
+<header>
+    <h2>Inner Circle</h2>
+    <div id="headerInfo"></div>
+    <button onclick="location.reload()" style="background:none; color:red; border:1px solid red; padding:5px 10px; border-radius:5px;">Logout</button>
+</header>
+
+<main>
+    <div id="sidebar">
+        <h3 style="font-size: 0.7em; color: var(--primary); margin-bottom: 15px;">INITIATES (Click to DM)</h3>
+        <div id="userList"></div>
+    </div>
+    <div id="chatArea">
+        <div id="chatContainer"></div>
+        <div id="inputArea" style="padding:20px; background:#0f0f0f; display:flex; gap:10px;">
+            <input type="text" id="messageInput" placeholder="Public transmission..." autocomplete="off" style="margin:0;">
+            <button class="btn-main" style="width:100px; margin:0;" id="sendMsgBtn">Send</button>
+        </div>
+    </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+window.onload = function() {
+    const firebaseConfig = {
+        apiKey: "AIzaSyDtGHGk144-eQIllFpwABXk8Ss4FwCgQME",
+        authDomain: "circle-38d10.firebaseapp.com",
+        databaseURL: "https://circle-38d10-default-rtdb.firebaseio.com",
+        projectId: "circle-38d10",
+        storageBucket: "circle-38d10.firebasestorage.app",
+        messagingSenderId: "122771546745",
+        appId: "1:122771546745:web:c766e8da22974e877aeaa8"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const rdb = firebase.database();
+    let currentUser = null;
+    let isRegisterMode = false;
+    let activeDMTarget = null;
+    let dmListener = null;
+
+    // --- AUTH LOGIC ---
+    document.getElementById('toggleBtn').onclick = () => {
+        isRegisterMode = !isRegisterMode;
+        document.getElementById('authTitle').innerText = isRegisterMode ? "Register" : "Initiation";
+        document.getElementById('mainAuthBtn').innerText = isRegisterMode ? "Sign Up" : "Access";
+    };
+
+    document.getElementById('mainAuthBtn').onclick = () => {
+        const u = document.getElementById('userIn').value.trim();
+        const p = document.getElementById('passIn').value;
+        if(!u || !p) return;
+
+        rdb.ref('users/' + u).once('value', (snap) => {
+            const data = snap.val();
+            if(isRegisterMode) {
+                if(data) return alert("Taken.");
+                rdb.ref('users/' + u).set({ pass: p, role: "Member", status: "Active", muteUntil: 0 });
+                alert("Done. Login now.");
+            } else {
+                if(data && data.pass === p) {
+                    currentUser = { name: u, ...data };
+                    document.getElementById('authOverlay').style.display = 'none';
+                    launchCircle();
+                } else alert("Denied.");
+            }
+        });
+    };
+
     function launchCircle() {
         document.getElementById('headerInfo').innerText = `${currentUser.name} (${currentUser.role})`;
         
-        // Listen for ANY DM sent to YOU to trigger notifications
-        rdb.ref('dms').on('child_added', (snap) => {
-            const roomID = snap.key;
-            if (roomID.includes(currentUser.name)) {
-                // Listen for the latest message in that room
-                rdb.ref('dms/' + roomID).limitToLast(1).on('child_added', (mSnap) => {
-                    const msg = mSnap.val();
-                    // If the last message wasn't from me and DM window isn't open for them
-                    if (msg.sender !== currentUser.name && activeDMTarget !== msg.sender) {
-                        const userEl = document.getElementById('user-' + msg.sender);
-                        if (userEl) userEl.classList.add('notif-glow');
-                    }
-                });
-            }
+        // Public Chat
+        rdb.ref('messages').limitToLast(50).on('value', (snap) => {
+            const container = document.getElementById('chatContainer');
+            container.innerHTML = '';
+            snap.forEach(c => {
+                const m = c.val();
+                const div = document.createElement('div');
+                div.className = `message msg-${m.role} ${m.sender === currentUser.name ? 'msg-me' : ''}`;
+                div.innerHTML = `<small style="font-size:0.7em; opacity:0.5;">${m.sender}</small><br>${m.text}`;
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
         });
 
-        // Update the User List rendering to include IDs for notifications
+        // Sidebar Users
         rdb.ref('users').on('value', (snap) => {
             const list = document.getElementById('userList');
             list.innerHTML = '';
             snap.forEach(c => {
                 const name = c.key;
                 if(name === currentUser.name) return;
+                const u = c.val();
                 const div = document.createElement('div');
                 div.className = 'user-row';
-                div.id = 'user-' + name; // ID for notifications
-                div.innerHTML = `<div>${name}</div>`;
+                div.innerHTML = `<div>${name} <small>(${u.role})</small></div>`;
                 
-                div.onclick = () => {
-                    div.classList.remove('notif-glow');
-                    openDM(name);
-                };
+                // Clicking user opens DM
+                div.onclick = () => openDM(name);
+
+                // Mod Tools (Added inside user row)
+                if(currentUser.role !== 'Member') {
+                    const tools = document.createElement('div');
+                    tools.style.marginTop = "5px";
+                    tools.innerHTML = `<button class="mod-btn" style="background:orange" onclick="event.stopPropagation(); mod('mute','${name}')">Mute</button>
+                                       <button class="mod-btn" style="background:red" onclick="event.stopPropagation(); mod('kick','${name}')">Kick</button>`;
+                    div.appendChild(tools);
+                }
                 list.appendChild(div);
             });
         });
-
-        // ... rest of your public chat listeners
     }
+
+    // --- PRIVATE MESSAGING ---
+    window.openDM = function(target) {
+        activeDMTarget = target;
+        document.getElementById('dmTargetName').innerText = `DIRECT LINK: ${target}`;
+        document.getElementById('dmOverlay').style.display = 'flex';
+        
+        const roomID = [currentUser.name, target].sort().join('_');
+        
+        if(dmListener) rdb.ref('dms/' + roomID).off(); // Clean up old listener
+        
+        dmListener = rdb.ref('dms/' + roomID).on('value', (snap) => {
+            const container = document.getElementById('dmContainer');
+            container.innerHTML = '';
+            snap.forEach(c => {
+                const m = c.val();
+                const div = document.createElement('div');
+                div.className = `message ${m.sender === currentUser.name ? 'msg-me' : 'msg-Member'}`;
+                div.style.alignSelf = m.sender === currentUser.name ? 'flex-end' : 'flex-start';
+                div.innerText = m.text;
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
+        });
+    }
+
+    window.closeDM = () => document.getElementById('dmOverlay').style.display = 'none';
+
+    window.sendDM = function() {
+        const text = document.getElementById('dmInput').value.trim();
+        if(!text || !activeDMTarget) return;
+        const roomID = [currentUser.name, activeDMTarget].sort().join('_');
+        rdb.ref('dms/' + roomID).push({ sender: currentUser.name, text: text, time: Date.now() });
+        document.getElementById('dmInput').value = '';
+    }
+
+    // --- PUBLIC MESSAGE ---
+    document.getElementById('sendMsgBtn').onclick = () => {
+        const text = document.getElementById('messageInput').value.trim();
+        if(!text) return;
+        rdb.ref('messages').push({ sender: currentUser.name, role: currentUser.role, text: text });
+        document.getElementById('messageInput').value = '';
+    };
+
+    window.mod = (type, target) => {
+        if(type === 'mute') rdb.ref('users/'+target).update({ muteUntil: Date.now() + 600000 });
+        if(type === 'kick') rdb.ref('users/'+target).update({ status: 'Kicked' });
+    }
+};
 </script>
+</body>
+</html>
