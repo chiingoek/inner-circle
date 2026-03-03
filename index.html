@@ -1,320 +1,61 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inner Circle | The Vault</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #8a2be2;
-            --primary-glow: rgba(138, 43, 226, 0.4);
-            --mod: #00ced1;
-            --bg: #050505;
-            --surface: #111;
-            --text: #e0e0e0;
-        }
-
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: 'Montserrat', sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            height: 100vh;
-            overflow: hidden;
-            background-image: radial-gradient(circle at center, #1a0033 0%, #050505 100%);
-        }
-
-        /* --- UI Overlays --- */
-        #authOverlay, #kickOverlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.95);
-            backdrop-filter: blur(15px);
-            z-index: 1000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .auth-card {
-            background: var(--surface);
-            padding: 40px;
-            border-radius: 20px;
-            border: 1px solid var(--primary);
-            box-shadow: 0 0 40px var(--primary-glow);
-            width: 380px;
-            text-align: center;
-        }
-
-        h1, h2 { letter-spacing: 5px; text-transform: uppercase; color: var(--primary); text-shadow: 0 0 10px var(--primary-glow); }
-
-        input {
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 10px;
-            border: 1px solid #333;
-            background: #0a0a0a;
-            color: #fff;
-            transition: 0.3s;
-        }
-
-        input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
-
-        .btn-main {
-            background: var(--primary);
-            color: white;
-            width: 100%;
-            padding: 15px;
-            margin-top: 15px;
-            border: none;
-            border-radius: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .btn-main:hover { background: #9b30ff; transform: scale(1.02); }
-
-        header {
-            height: 70px;
-            background: rgba(17, 17, 17, 0.9);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 30px;
-            border-bottom: 2px solid var(--primary);
-        }
-
-        main { display: flex; height: calc(100vh - 70px); }
-
-        #sidebar {
-            width: 300px;
-            background: rgba(10, 10, 10, 0.9);
-            border-right: 1px solid #222;
-            padding: 20px;
-            overflow-y: auto;
-            display: none;
-        }
-
-        #chatArea { flex: 1; display: flex; flex-direction: column; }
-        #chatContainer { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        
-        .message { padding: 12px 18px; border-radius: 15px; max-width: 70%; font-size: 0.95em; line-height: 1.4; }
-        .msg-Member { background: #222; align-self: flex-start; border-left: 3px solid #444; }
-        .msg-Moderator { background: #1a252b; align-self: flex-start; border-left: 3px solid var(--mod); }
-        .msg-Admin { background: #251a2b; align-self: flex-start; border-left: 3px solid var(--primary); }
-        .msg-me { align-self: flex-end; background: var(--primary); color: white; }
-
-        .msg-meta { font-size: 0.7em; opacity: 0.5; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
-
-        .user-row { background: #1a1a1a; padding: 12px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; }
-        .mod-btn { font-size: 0.65em; padding: 4px 8px; margin-right: 4px; border-radius: 4px; cursor: pointer; border: none; font-weight: bold; }
-        .b-kick { background: #ff4500; color: white; }
-        .b-mute { background: #daa520; color: white; }
-        .b-ban { background: #ff0000; color: white; }
-        .b-promo { background: var(--mod); color: white; }
-
-        #inputArea { padding: 25px; background: #0f0f0f; display: flex; gap: 15px; border-top: 1px solid #222; }
-    </style>
-</head>
-<body>
-
-<div id="authOverlay">
-    <div class="auth-card">
-        <h1 id="authTitle">Initiation</h1>
-        <p id="authDesc" style="font-size: 0.7em; color: #666; margin-bottom: 20px;">ENTER YOUR CREDENTIALS</p>
-        <input type="text" id="userIn" placeholder="Identity (Username)">
-        <input type="password" id="passIn" placeholder="Security Cipher (Password)">
-        <button id="mainAuthBtn" class="btn-main">Access The Circle</button>
-        <div style="margin-top: 20px;">
-            <button id="toggleBtn" style="background:none; border:none; color:var(--primary); cursor:pointer; text-decoration:underline; font-size: 0.8em;">
-                New Initiate? Register here
-            </button>
-        </div>
-    </div>
-</div>
-
-<div id="kickOverlay" style="display:none;">
-    <div class="auth-card">
-        <h2 style="color:red;">Exiled</h2>
-        <p>Your presence is no longer welcome.</p>
-        <button id="rejoinBtn" class="btn-main" onclick="requestRejoin()">Request Rejoin</button>
-        <p id="requestStatus" style="font-size:0.8em; color:gray; margin-top:10px;"></p>
-    </div>
-</div>
-
-<header>
-    <h2 style="font-size: 1.2em; margin: 0;">Inner Circle</h2>
-    <div id="headerInfo" style="font-size: 0.8em; letter-spacing: 1px;"></div>
-    <button onclick="location.reload()" style="background:none; color:red; border:1px solid red; padding:5px 10px; cursor:pointer; border-radius:5px;">Logout</button>
-</header>
-
-<main>
-    <div id="sidebar">
-        <h3 style="font-size: 0.8em; color: var(--primary); margin-bottom: 20px;">MODERATION SECTOR</h3>
-        <div id="userList"></div>
-    </div>
-    <div id="chatArea">
-        <div id="chatContainer"></div>
-        <div id="inputArea">
-            <input type="text" id="messageInput" placeholder="Transmit wisdom..." autocomplete="off">
-            <button class="btn-main" style="width:120px; margin-top:0;" id="sendMsgBtn">Send</button>
-        </div>
-    </div>
-</main>
-
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+    .notif-glow {
+        box-shadow: 0 0 15px var(--primary);
+        border: 1px solid var(--primary) !important;
+        animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    #dmList {
+        margin-top: 20px;
+        padding-top: 10px;
+        border-top: 1px solid #333;
+    }
+</style>
 
 <script>
-window.onload = function() {
-    const firebaseConfig = {
-        apiKey: "AIzaSyDtGHGk144-eQIllFpwABXk8Ss4FwCgQME",
-        authDomain: "circle-38d10.firebaseapp.com",
-        databaseURL: "https://circle-38d10-default-rtdb.firebaseio.com",
-        projectId: "circle-38d10",
-        storageBucket: "circle-38d10.firebasestorage.app",
-        messagingSenderId: "122771546745",
-        appId: "1:122771546745:web:c766e8da22974e877aeaa8"
-    };
-
-    try {
-        firebase.initializeApp(firebaseConfig);
-        console.log("Firebase Initialized");
-    } catch (e) {
-        alert("Firebase Config Error: " + e.message);
-    }
-
-    const rdb = firebase.database();
-    let currentUser = null;
-    let isRegisterMode = false;
-
-    // UI Elements
-    const authTitle = document.getElementById('authTitle');
-    const authDesc = document.getElementById('authDesc');
-    const mainAuthBtn = document.getElementById('mainAuthBtn');
-    const toggleBtn = document.getElementById('toggleBtn');
-    const messageInput = document.getElementById('messageInput');
-    const sendMsgBtn = document.getElementById('sendMsgBtn');
-
-    // --- AUTH UI TOGGLE ---
-    toggleBtn.onclick = function() {
-        isRegisterMode = !isRegisterMode;
-        authTitle.innerText = isRegisterMode ? "Registration" : "Initiation";
-        authDesc.innerText = isRegisterMode ? "CREATE A NEW IDENTITY" : "ENTER YOUR CREDENTIALS";
-        mainAuthBtn.innerText = isRegisterMode ? "REGISTER IDENTITY" : "ACCESS THE CIRCLE";
-        toggleBtn.innerText = isRegisterMode ? "Already an initiate? Login" : "New Initiate? Register here";
-    };
-
-    mainAuthBtn.onclick = function() {
-        const u = document.getElementById('userIn').value.trim();
-        const p = document.getElementById('passIn').value;
-        if(!u || !p) return alert("Fields required.");
-
-        const type = isRegisterMode ? 'signup' : 'login';
-
-        rdb.ref('users/' + u).once('value').then((snap) => {
-            const data = snap.val();
-            if(type === 'signup') {
-                if(data) return alert("Identity already exists.");
-                rdb.ref('users/' + u).set({
-                    pass: p, role: "Member", status: "Active", muteUntil: 0, rejoinPending: false
-                }).then(() => {
-                    alert("Registration complete. Now login.");
-                    isRegisterMode = true; toggleBtn.click(); // Reset to login
-                });
-            } else {
-                if(data && data.pass === p) {
-                    if(data.status === 'Banned') return alert("PERMANENTLY EXILED.");
-                    currentUser = { name: u, ...data };
-                    if(data.status === 'Kicked') {
-                        document.getElementById('authOverlay').style.display = 'none';
-                        document.getElementById('kickOverlay').style.display = 'flex';
-                        return;
-                    }
-                    document.getElementById('authOverlay').style.display = 'none';
-                    launchCircle();
-                } else { alert("Cipher Incorrect."); }
-            }
-        }).catch(err => alert("Database Error: " + err.message));
-    };
-
     function launchCircle() {
-        if(currentUser.role === 'Admin' || currentUser.role === 'Moderator') {
-            document.getElementById('sidebar').style.display = 'block';
-            rdb.ref('users').on('value', renderUserList);
-        }
-        document.getElementById('headerInfo').innerText = `${currentUser.name} // LVL: ${currentUser.role}`;
-
-        rdb.ref('messages').limitToLast(50).on('value', (snap) => {
-            const container = document.getElementById('chatContainer');
-            container.innerHTML = '';
-            snap.forEach(child => {
-                const m = child.val();
-                const div = document.createElement('div');
-                div.className = `message msg-${m.role} ${m.sender === currentUser.name ? 'msg-me' : ''}`;
-                div.innerHTML = `<div class="msg-meta">${m.sender} [${m.role}]</div><div>${m.text}</div>`;
-                container.appendChild(div);
-            });
-            container.scrollTop = container.scrollHeight;
-        });
-
-        rdb.ref('users/' + currentUser.name + '/status').on('value', (s) => {
-            if(s.val() === 'Kicked' || s.val() === 'Banned') location.reload();
-        });
-    }
-
-    function renderUserList(snap) {
-        const list = document.getElementById('userList');
-        list.innerHTML = '';
-        snap.forEach(child => {
-            const name = child.key;
-            const u = child.val();
-            if(name === currentUser.name) return;
-            const div = document.createElement('div');
-            div.className = 'user-row';
-            let tools = `<button class="mod-btn b-mute" onclick="window.modAction('mute','${name}')">Mute</button>
-                         <button class="mod-btn b-kick" onclick="window.modAction('kick','${name}')">Kick</button>`;
-            if(currentUser.role === 'Admin') {
-                tools += `<button class="mod-btn b-ban" onclick="window.modAction('ban','${name}')">Ban</button>
-                          <button class="mod-btn b-promo" onclick="window.modAction('promote','${name}')">Mod</button>`;
+        document.getElementById('headerInfo').innerText = `${currentUser.name} (${currentUser.role})`;
+        
+        // Listen for ANY DM sent to YOU to trigger notifications
+        rdb.ref('dms').on('child_added', (snap) => {
+            const roomID = snap.key;
+            if (roomID.includes(currentUser.name)) {
+                // Listen for the latest message in that room
+                rdb.ref('dms/' + roomID).limitToLast(1).on('child_added', (mSnap) => {
+                    const msg = mSnap.val();
+                    // If the last message wasn't from me and DM window isn't open for them
+                    if (msg.sender !== currentUser.name && activeDMTarget !== msg.sender) {
+                        const userEl = document.getElementById('user-' + msg.sender);
+                        if (userEl) userEl.classList.add('notif-glow');
+                    }
+                });
             }
-            if(u.rejoinPending) tools += `<button class="mod-btn" style="background:green; color:white; width:100%; margin-top:5px;" onclick="window.modAction('approve','${name}')">Approve</button>`;
-            div.innerHTML = `<div style="font-size:0.8em; margin-bottom:8px;">${name} (${u.role})</div><div style="font-size:0.7em; color:${u.status === 'Active' ? 'green' : 'red'};">${u.status}</div><div>${tools}</div>`;
-            list.appendChild(div);
         });
+
+        // Update the User List rendering to include IDs for notifications
+        rdb.ref('users').on('value', (snap) => {
+            const list = document.getElementById('userList');
+            list.innerHTML = '';
+            snap.forEach(c => {
+                const name = c.key;
+                if(name === currentUser.name) return;
+                const div = document.createElement('div');
+                div.className = 'user-row';
+                div.id = 'user-' + name; // ID for notifications
+                div.innerHTML = `<div>${name}</div>`;
+                
+                div.onclick = () => {
+                    div.classList.remove('notif-glow');
+                    openDM(name);
+                };
+                list.appendChild(div);
+            });
+        });
+
+        // ... rest of your public chat listeners
     }
-
-    window.modAction = function(type, target) {
-        const ref = rdb.ref('users/' + target);
-        if(type === 'mute') ref.update({ muteUntil: Date.now() + 600000 });
-        if(type === 'kick') ref.update({ status: 'Kicked' });
-        if(type === 'ban') ref.update({ status: 'Banned' });
-        if(type === 'promote') ref.update({ role: 'Moderator' });
-        if(type === 'approve') ref.update({ status: 'Active', rejoinPending: false });
-    };
-
-    sendMsgBtn.onclick = function() {
-        const msg = messageInput.value.trim();
-        if(!msg) return;
-        rdb.ref('users/' + currentUser.name).once('value', (snap) => {
-            if(snap.val().muteUntil > Date.now()) return alert("MUTED.");
-            rdb.ref('messages').push({ sender: currentUser.name, role: currentUser.role, text: msg, time: Date.now() });
-            messageInput.value = '';
-        });
-    };
-
-    messageInput.onkeypress = e => { if(e.key === 'Enter') sendMsgBtn.click(); };
-};
-
-function requestRejoin() {
-    firebase.database().ref('users/' + currentUser.name).update({ rejoinPending: true });
-    document.getElementById('rejoinBtn').disabled = true;
-    document.getElementById('requestStatus').innerText = "Signal sent.";
-}
 </script>
-</body>
-</html>
